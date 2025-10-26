@@ -7,8 +7,11 @@ PUBLISHED_PORT="$SOCAT_PORT"
 _RESTART="$SSH_RESTART"
 
 while true; do
-	printf "Forking :::%d onto 0.0.0.0:%d > trading mode %s \n" \
+	printf "Forking :::%d onto 0.0.0.0:%d > trading mode %s (IPv6-aware)\n" \
 		"${LOCAL_PORT}" "${PUBLISHED_PORT}" "${TRADING_MODE}"
-	socat TCP-LISTEN:"${PUBLISHED_PORT}",fork TCP:127.0.0.1:"${LOCAL_PORT}"
+	# IPv6-aware socat for Railway.com compatibility
+	# TCP6-LISTEN accepts both IPv6 and IPv4 (via IPv4-mapped addresses)
+	# TCP4:127.0.0.1 forwards to IB Gateway as IPv4 localhost (bypasses TrustedIPs)
+	socat TCP6-LISTEN:"${PUBLISHED_PORT}",reuseaddr,fork TCP4:127.0.0.1:"${LOCAL_PORT}"
 	sleep "${_RESTART:-5}"
 done
