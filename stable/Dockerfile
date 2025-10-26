@@ -47,12 +47,27 @@ RUN apt-get update -y && \
   else \
     ./${IB_GATEWAY_FILE} -q -dir /root/Jts/ibgateway/${IB_GATEWAY_VERSION} ; \
   fi && \
-  # Install IBC
-  curl -sSOL ${IBC_URL} && \
-  mkdir /root/ibc && \
-  unzip ./${IBC_FILE} -d /root/ibc && \
+  # Install IBC - BUILD FROM CUSTOM SOURCE (with IPv6 TrustedIPs fix)
+  # Original: curl -sSOL ${IBC_URL} && unzip ./${IBC_FILE} -d /root/ibc
+  mkdir -p /root/ibc
+
+# Copy custom IBC source with TrustedIPs fix
+COPY ./ibc-source /tmp/ibc-source
+
+# Build custom IBC jar from source
+RUN cd /tmp/ibc-source && \
+  apt-get update && apt-get install -y ant && \
+  export IBC_BIN=/root/Jts/ibgateway/${IB_GATEWAY_VERSION}/jars && \
+  ant && \
+  # Copy built jar and resources to /root/ibc
+  cp target/*.jar /root/ibc/IBC.jar && \
+  cp -r resources/* /root/ibc/ && \
   chmod -R u+x /root/ibc/*.sh && \
-  chmod -R u+x /root/ibc/scripts/*.sh
+  chmod -R u+x /root/ibc/scripts/*.sh && \
+  # Clean up
+  rm -rf /tmp/ibc-source && \
+  apt-get remove -y ant && apt-get autoremove -y && \
+  rm -rf /var/lib/apt/lists/*
 
 COPY ./config/ibgateway/jts.ini.tmpl /root/Jts/jts.ini.tmpl
 COPY ./config/ibc/config.ini.tmpl /root/ibc/config.ini.tmpl
